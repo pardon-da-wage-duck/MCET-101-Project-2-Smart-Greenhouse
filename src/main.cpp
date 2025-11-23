@@ -155,18 +155,11 @@ float readThermistor(int pin, int seriesResistor, bool inCelsius)
 
 float readPhotoresistor(int pin, int seriesResistor)
 {
-  float V_REF = 5.0; // Voltage reference
-
+  float a = 6e6, b = -1.384;
   float ThermistorVoltage = analogRead(pin) * (5 / 1023.0);
-  float lux;
-  // Voltage divider + lux conversion (typical LDR):
-  if (ThermistorVoltage < V_REF && ThermistorVoltage > 0)
-  {
-    float ThermistorResistance = seriesResistor * ((5 / ThermistorVoltage) - 1);
-    return lux = 500 * (10000 / ThermistorResistance);
-  }
-  else
-    return;
+  float ThermistorResistance = seriesResistor * ((5 / ThermistorVoltage) - 1);
+  float lux = a * pow(ThermistorResistance, b);
+  return lux;
 }
 
 float readWaterLevel(int pin, float maxHeight)
