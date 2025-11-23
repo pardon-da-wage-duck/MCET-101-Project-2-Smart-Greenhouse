@@ -38,7 +38,7 @@ DHT dht(DHTPIN, DHTTYPE); // define dht11 object
 float readThermistor(int, bool);
 float readThermistor(int, int, bool);
 float readPhotoresistor(int, int);
-float readWaterLevel(int);
+float readWaterLevel(int, float);
 
 void setup()
 {
@@ -117,7 +117,7 @@ void loop()
   Serial.println(motionSensed);
 
   // Read Water Level
-  float waterlevel = readWaterLevel(WATERLEVEL); // inches
+  float waterlevel = readWaterLevel(WATERLEVEL, waterLevelSensorLength); // inches
   Serial.println(waterlevel);
 }
 
@@ -169,7 +169,14 @@ float readPhotoresistor(int pin, int seriesResistor)
     return;
 }
 
-float readWaterLevel(int pin)
+float readWaterLevel(int pin, float maxHeight)
 {
-  return (float)(analogRead(pin) * (5 / 1023.0));
+  float a = 1e-07;
+  float b = 9.9077;
+  float voltage = (analogRead(pin) * (5 / 1023.0));
+  float percentage = a * exp(voltage * b);
+  float height = maxHeight * percentage;
+  if (percentage > 1)
+    return maxHeight;
+  return height;
 }
