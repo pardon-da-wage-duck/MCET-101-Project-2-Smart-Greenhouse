@@ -96,8 +96,6 @@ void loop()
   float photo1 = readPhotoresistor(PHOTORESISTOR1, SERIES_RESISTOR_PHOTO); // records the brightness within the greennhouse
   float photo2 = readPhotoresistor(PHOTORESISTOR2, SERIES_RESISTOR_PHOTO); // used to detect whether or not the lid of the greenhouse is closed
   float ledBrightness = calculateBrightness(photo1);
-  analogWrite(LEDS, ledBrightness);
-  ledBrightness = ledBrightness * (5 / 255.0); // volts
 
   // PIR Sensor
   float PIRReading = digitalRead(PIRSENSOR);
@@ -107,9 +105,23 @@ void loop()
 
   // controlling fan
   float fanPower1 = fanPower(heatIndexF);
-  analogWrite(MOTOR1, fanPower1);
-  analogWrite(MOTOR2, fanPower1);
-  fanPower1 = fanPower1 * (5 / 255.0); // volts
+
+  // actuators
+  if (photo2 < 10)
+  {
+    analogWrite(LEDS, ledBrightness);
+    analogWrite(MOTOR1, fanPower1);
+    analogWrite(MOTOR2, fanPower1);
+  }
+  else
+  {
+    analogWrite(LEDS, 0);
+    analogWrite(MOTOR1, 0);
+    analogWrite(MOTOR2, 0);
+  }
+
+  ledBrightness = ledBrightness * (5 / 255.0); // volts
+  fanPower1 = fanPower1 * (5 / 255.0);         // volts
 
   float data[12] = {humidity, celsius, fahrenheit, heatIndexC, heatIndexF, therm1, photo1, photo2, PIRReading, waterlevel, ledBrightness, fanPower1};
 
