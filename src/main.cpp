@@ -31,14 +31,19 @@
 #define LEDS 9
 
 float waterLevelSensorLength = 1.605; // inches
+float delayTime = 500;
+float time = 0;
 
 DHT dht(DHTPIN, DHTTYPE); // define dht11 object
 
 // function declarations
+void sendSerial(float);
 float readThermistor(int, bool);
 float readThermistor(int, int, bool);
 float readPhotoresistor(int, int);
 float readWaterLevel(int, float);
+float ledBrightness(int, float);
+float fanSpeed(float, float, float);
 
 void setup()
 {
@@ -61,7 +66,8 @@ void setup()
 
 void loop()
 {
-  delay(500);
+  delay(delayTime);
+  time += delayTime * 0.001;
 
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
@@ -83,45 +89,42 @@ void loop()
   // Compute heat index in Celsius (isFahreheit = false)
   float humidityIndexC = dht.computeHeatIndex(celsius, humidity, false);
 
-  Serial.print(F("Humidity: "));
-  Serial.print(humidity);
-  Serial.print(',');
-  Serial.print(F("%  Temperature: "));
-  Serial.print(celsius);
-  Serial.print(',');
-  Serial.print(F("°C "));
-  Serial.print(fahrenheit);
-  Serial.print(',');
-  Serial.print(F("°F  Heat index: "));
-  Serial.print(humidityIndexC);
-  Serial.print(',');
-  Serial.print(F("°C "));
-  Serial.println(humidityIndexF);
-  Serial.println(F("°F"));
-
   // Thermistor
   float therm1 = readThermistor(THERMISTOR1, SERIES_RESISITOR_THERM, false);
   float therm2 = readThermistor(THERMISTOR2, SERIES_RESISITOR_THERM, false);
 
-  Serial.println(therm1);
-  Serial.println(therm2);
-
   // Photoresistor
   float photo1 = readPhotoresistor(PHOTORESISTOR1, SERIES_RESISTOR_PHOTO);
-  Serial.println(photo1);
   float photo2 = readPhotoresistor(PHOTORESISTOR2, SERIES_RESISTOR_PHOTO);
-  Serial.println(photo2);
 
   // PIR Sensor
   float motionSensed = digitalRead(PIRSENSOR);
-  Serial.println(motionSensed);
 
   // Read Water Level
   float waterlevel = readWaterLevel(WATERLEVEL, waterLevelSensorLength); // inches
-  Serial.println(waterlevel);
+
+  float lighting = ledBrightness(LEDS, photo1);
+  digitalWrite(LEDS, lighting);
+
+  float fanSpeed1; //= fanSpeed();
+  float fanSpeed2; //= fanSpeed();
+
+  float data[14] = {humidity, celsius, fahrenheit, humidityIndexC, humidityIndexF, therm1, therm2, photo1, photo2, motionSensed, waterlevel, lighting, fanSpeed1, fanSpeed2};
+
+  for (unsigned int i = 0; i < sizeof(data) / sizeof(data[0]); i++)
+  {
+    sendSerial(data[i]);
+  }
+  Serial.println(time);
 }
 
 // function definitions
+void sendSerial(float packet)
+{
+  Serial.print(packet);
+  Serial.print(',');
+}
+
 float readThermistor(int pin, bool inCelsius)
 {
   float thermistorReading = analogRead(pin) * (5 / 1023.0);
@@ -172,4 +175,10 @@ float readWaterLevel(int pin, float maxHeight)
   if (percentage > 1)
     return maxHeight;
   return height;
+}
+
+float ledBrightness(int pin, float surroundingBrightness)
+{
+  float brightness = 255 * (1 - (surroundingBrightness / 22000));
+  return brightness;
 }
