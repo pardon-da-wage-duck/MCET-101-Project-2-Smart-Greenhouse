@@ -27,11 +27,13 @@
 // uses PWM pins 3, 5, 6, 9-11
 #define MOTOR1 5
 #define MOTOR2 6
-#define LEDS 9
+#define LED1 9
+#define LED2 10
 
 float waterLevelSensorLength = 1.605; // inches
 float delayTime = 500;
 float time = 0;
+float timeStamp;
 
 DHT dht(DHTPIN, DHTTYPE); // define dht11 object
 
@@ -59,7 +61,8 @@ void setup()
 
   pinMode(MOTOR1, OUTPUT);
   pinMode(MOTOR2, OUTPUT);
-  pinMode(LEDS, OUTPUT);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
 }
 
 void loop()
@@ -109,15 +112,26 @@ void loop()
   // actuators
   if (photo2 < 10)
   {
-    analogWrite(LEDS, ledBrightness);
+    analogWrite(LED1, ledBrightness);
     analogWrite(MOTOR1, fanPower1);
     analogWrite(MOTOR2, fanPower1);
   }
   else
   {
-    analogWrite(LEDS, 0);
+    analogWrite(LED1, 0);
     analogWrite(MOTOR1, 0);
     analogWrite(MOTOR2, 0);
+  }
+
+  // If PIR sensor detects motion within the greenhouse the light would turn on for 10 seconds, if there's no more movement after 10 seconds the lights would automatically turn off.
+  if (PIRReading == 1)
+  {
+    digitalWrite(LED2, 1);
+    timeStamp = time;
+  }
+  if (time >= timeStamp + delayTime * 10)
+  {
+    digitalWrite(LED2, 0);
   }
 
   ledBrightness = ledBrightness * (5 / 255.0); // volts
