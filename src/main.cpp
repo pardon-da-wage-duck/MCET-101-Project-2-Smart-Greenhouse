@@ -1,7 +1,7 @@
-/** This program
- *
+/** This program takes readings from multiple sensors and uses that data to control a set of motors and LEDs.
+ * The data collected is also sent over serial to be read in MatLab where the data would be displayed in a GUI.
  * Written by Group 73
- * Last updated: November 18, 2025
+ * Last updated: November 24, 2025
  */
 
 // Dependent arduino libraries
@@ -15,7 +15,6 @@
 #define PHOTORESISTOR1 A1
 #define PHOTORESISTOR2 A2
 #define THERMISTOR1 A3
-#define THERMISTOR2 A4
 #define SERIES_RESISITOR_THERM 10000
 #define SERIES_RESISTOR_PHOTO 10000
 
@@ -42,8 +41,8 @@ float readThermistor(int, bool);
 float readThermistor(int, int, bool);
 float readPhotoresistor(int, int);
 float readWaterLevel(int, float);
-float ledBrightness(int, float);
-float fanSpeed(float, float, float);
+float calculateBrightness(float);
+float fanPower(float);
 
 void setup()
 {
@@ -56,7 +55,6 @@ void setup()
   pinMode(PHOTORESISTOR1, INPUT);
   pinMode(PHOTORESISTOR2, INPUT);
   pinMode(THERMISTOR1, INPUT);
-  pinMode(THERMISTOR2, INPUT);
   pinMode(PIRSENSOR, INPUT);
 
   pinMode(MOTOR1, OUTPUT);
@@ -67,11 +65,13 @@ void setup()
 void loop()
 {
   delay(delayTime);
-  time += delayTime * 0.001;
+  time += delayTime * 0.001; // keeps track of the runtime of the program in ms
 
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float humidity = dht.readHumidity();
+  float humidity = dht.readHumidity(); // percentage
+
+  // Internal Temperature of the greenhouse
   // Read temperature as Celsius (the default)
   float celsius = dht.readTemperature();
   // Read temperature as Fahrenheit (isFahrenheit = true)
@@ -85,31 +85,33 @@ void loop()
   }
 
   // Compute heat index in Fahrenheit (the default)
-  float humidityIndexF = dht.computeHeatIndex(fahrenheit, humidity);
+  float heatIndexF = dht.computeHeatIndex(fahrenheit, humidity);
   // Compute heat index in Celsius (isFahreheit = false)
-  float humidityIndexC = dht.computeHeatIndex(celsius, humidity, false);
+  float heatIndexC = dht.computeHeatIndex(celsius, humidity, false);
 
   // Thermistor
-  float therm1 = readThermistor(THERMISTOR1, SERIES_RESISITOR_THERM, false);
-  float therm2 = readThermistor(THERMISTOR2, SERIES_RESISITOR_THERM, false);
+  float therm1 = readThermistor(THERMISTOR1, SERIES_RESISITOR_THERM, false); // checks the temperature outside of the greenhouse
 
   // Photoresistor
-  float photo1 = readPhotoresistor(PHOTORESISTOR1, SERIES_RESISTOR_PHOTO);
-  float photo2 = readPhotoresistor(PHOTORESISTOR2, SERIES_RESISTOR_PHOTO);
+  float photo1 = readPhotoresistor(PHOTORESISTOR1, SERIES_RESISTOR_PHOTO); // records the brightness within the greennhouse
+  float photo2 = readPhotoresistor(PHOTORESISTOR2, SERIES_RESISTOR_PHOTO); // used to detect whether or not the lid of the greenhouse is closed
+  float ledBrightness = calculateBrightness(photo1);
+  analogWrite(LEDS, ledBrightness);
+  ledBrightness = ledBrightness * (5 / 255.0); // volts
 
   // PIR Sensor
-  float motionSensed = digitalRead(PIRSENSOR);
+  float PIRReading = digitalRead(PIRSENSOR);
 
   // Read Water Level
   float waterlevel = readWaterLevel(WATERLEVEL, waterLevelSensorLength); // inches
 
-  float lighting = ledBrightness(LEDS, photo1);
-  digitalWrite(LEDS, lighting);
+  // controlling fan
+  float fanPower1 = fanPower(heatIndexF);
+  analogWrite(MOTOR1, fanPower1);
+  analogWrite(MOTOR2, fanPower1);
+  fanPower1 = fanPower1 * (5 / 255.0); // volts
 
-  float fanSpeed1; //= fanSpeed();
-  float fanSpeed2; //= fanSpeed();
-
-  float data[14] = {humidity, celsius, fahrenheit, humidityIndexC, humidityIndexF, therm1, therm2, photo1, photo2, motionSensed, waterlevel, lighting, fanSpeed1, fanSpeed2};
+  float data[12] = {humidity, celsius, fahrenheit, heatIndexC, heatIndexF, therm1, photo1, photo2, PIRReading, waterlevel, ledBrightness, fanPower1};
 
   for (unsigned int i = 0; i < sizeof(data) / sizeof(data[0]); i++)
   {
@@ -177,8 +179,20 @@ float readWaterLevel(int pin, float maxHeight)
   return height;
 }
 
-float ledBrightness(int pin, float surroundingBrightness)
+float calculateBrightness(float surroundingBrightness)
 {
-  float brightness = 255 * (1 - (surroundingBrightness / 22000));
+  float brightness = 255 * (1 - (surroundingBrightness / 4000));
   return brightness;
+}
+
+float fanPower(float heatIndex)
+{
+  int maxTemp = 65; // fahrenheit
+  if (heatIndex > maxTemp)
+  {
+    float power = map(heatIndex, 65, 100, 130, 255);
+    return power;
+  }
+  else
+    return 0.0;
 }
