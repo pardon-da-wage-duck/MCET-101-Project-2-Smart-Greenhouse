@@ -83,7 +83,7 @@ void loop()
   // Check if any reads failed and exit early (to try again).
   if (isnan(humidity) || isnan(celsius) || isnan(fahrenheit))
   {
-    Serial.println(F("Failed to read from DHT sensor!"));
+    // Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
 
@@ -110,7 +110,7 @@ void loop()
   float fanPower1 = fanPower(heatIndexF);
 
   // actuators
-  if (photo2 < 10)
+  if (photo2 < 40)
   {
     analogWrite(LED1, ledBrightness);
     analogWrite(MOTOR1, fanPower1);
@@ -216,7 +216,7 @@ float fanPower(float heatIndex)
   int maxTemp = 65; // fahrenheit
   if (heatIndex > maxTemp)
   {
-    float power = map(heatIndex, 65, 100, 130, 255);
+    float power = map(heatIndex, 65, 100, 200, 255);
     return power;
   }
   else
